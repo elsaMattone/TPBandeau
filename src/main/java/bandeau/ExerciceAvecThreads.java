@@ -1,5 +1,8 @@
 package bandeau;
 
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
+
 public class ExerciceAvecThreads {
 
     public static void main(String[] args) {
@@ -15,12 +18,47 @@ public class ExerciceAvecThreads {
         Bandeau b2 = new Bandeau();
         Bandeau b3 = new Bandeau();
         System.out.println("CTRL-C pour terminer le programme");
-        // On doit jouer le scénario en même temps sur les trois bandeaux
-        s.playOn(b1);
-        s.playOn(b2);
-        s.playOn(b3);
+
+        Lock lockB1 = new ReentrantLock(); // Verrou pour b1
+        Lock lockB2 = new ReentrantLock(); // Verrou pour b2
+        Lock lockB3 = new ReentrantLock(); // Verrou pour b3
+
+        // Créer des threads pour chaque bandeau et jouer le scénario en parallèle
+        Thread thread1 = new Thread(() -> {
+            playScenario(s, b1, lockB1);
+        });
+        Thread thread2 = new Thread(() -> {
+            playScenario(s, b2, lockB2);
+        });
+        Thread thread3 = new Thread(() -> {
+            playScenario(s, b3, lockB3);
+        });
+
+        // Démarrer les threads
+        thread1.start();
+        thread2.start();
+        thread3.start();
+
+        try {
+            // Attendre que tous les threads se terminent
+            thread1.join();
+            thread2.join();
+            thread3.join();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
         // On rejoue le scénario sur b1 quand le premier jeu est fini
-        s.playOn(b1);
+        playScenario(s, b1, lockB1);
+    }
+
+    private void playScenario(Scenario scenario, Bandeau bandeau, Lock lockBandeau) {
+        lockBandeau.lock(); // Acquérir le verrou pour le bandeau
+        try {
+            scenario.playOn(bandeau); // Jouer le scénario
+        } finally {
+            lockBandeau.unlock(); // Libérer le verrou pour le bandeau
+        }
     }
 
     private Scenario makeScenario() {
